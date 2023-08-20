@@ -11,6 +11,8 @@ dagster==1.4.5
 dagster-graphql==1.4.5
 dagster-webserver==1.4.5
 docstring-parser==0.15
+elastic-transport==8.4.0
+elasticsearch==8.9.0
 exceptiongroup==1.1.3
 fsspec==2023.6.0
 gql==3.4.1
