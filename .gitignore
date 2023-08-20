@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 
+
 # Distribution / packaging
 .Python
 build/
@@ -106,3 +107,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 docx/data/output/*.docx
+tmp*

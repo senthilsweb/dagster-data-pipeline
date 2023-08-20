@@ -23,7 +23,7 @@ pip install -r requirements.txt
 ## Run the pipeline
 
 ```bash
-dagster dev -f ./hello-dagster.py 
+dagster dev -f ./zybot-text-extract-from-pdf.py 
 ```
 
 
@@ -35,10 +35,19 @@ Input variable
   'ops': {
     'split_pdf': {
       'config': {
-        'input_file_path': '/Users/skaruppaiah1/projects/dagster-data-flows/input/Ilaiya-Raani.pdf',
-        'output_file_path': '/Users/skaruppaiah1/projects/dagster-data-flows/output'
+        'input_file_path': '/Users/skaruppaiah1/projects/dagster-data-flows/input/mogni-theevu.pdf',
+        'output_file_path': '/Users/skaruppaiah1/projects/dagster-data-flows/output',
+        'ocr_lang': 'tam'
+      }
+    },
+    'extract_text_from_png': {
+      'config': {
+        'input_file_path': '/input/mogni-theevu.pdf',
+        'output_file_path': '/output',
+        'ocr_lang': 'tam'
       }
     }
   }
 }
 ```
+> Note: Please change the input_file_path and output_file_path accordingly. The output file path should be a directory and not a file path. The output file will be named as the input file name with the page number appended to it. For example, if the input file name is `Ilaiya-Raani.pdf`, the output file will be named as `Ilaiya-Raani_1.pdf` for the first page, `Ilaiya-Raani_2.pdf` for the second page and so on.
