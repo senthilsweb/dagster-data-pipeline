@@ -7,6 +7,7 @@ import pytesseract
 import os
 from pdf2image import convert_from_path
 from PIL import Image
+from elasticsearch import Elasticsearch
 
 class AssetCongigs(Config):
     input_file_path: str
@@ -153,9 +154,20 @@ def save_to_disk(build_json_documents):
     
 @asset
 def save_to_elasticsearch(save_to_disk):
-   
-     
-    return save_to_disk
+    cloud_id = 'ebooks:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRlOTdhNGI0NzBlMmE0OWNmYjBlMTBjOWJiMzQ2NTQxNSQ4OTQ5NjU2OTU3ZGM0MzUwOTYwYWU5ODcyZjEzMTVlZg=='  # Replace with your Elastic Cloud ID
+    cloud_auth = ('elastic', 'n26ugDzFh4NhGldmQDKMyKm0')  # Replace with your Cloud username and password
+    es = Elasticsearch( cloud_id=cloud_id, http_auth=cloud_auth )
+    index_name = 'ebooks'
+
+    for ebook in save_to_disk:
+        # Index each eBook document
+        es.index(index=index_name, body=ebook)
+
+    # Refresh the index
+    es.indices.refresh(index=index_name)
+
+    
+    return None
 
 
 
