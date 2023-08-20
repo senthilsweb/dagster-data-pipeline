@@ -17,7 +17,7 @@ class AssetCongigs(Config):
 @asset
 def split_pdf(context,config: AssetCongigs):
     # Implement the logic to split the PDF into individual pages
-    # Return a list of paths to the splitted PDF pages
+    # Return a list of splitted pdf paths
 
     input_pdf_name = config.input_file_path.split('/')[-1].split('.')[0]  # Extract input PDF file name without extension
     splitted_pdf_paths = []
@@ -25,15 +25,16 @@ def split_pdf(context,config: AssetCongigs):
     with open(config.input_file_path, 'rb') as pdf_file:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         total_pages = len(pdf_reader.pages)
-
-        # Create the output folder if it doesn't exist
-        os.makedirs(config.output_file_path, exist_ok=True)
+       
+        pdf_file_folder = os.path.join(config.output_file_path, f"{input_pdf_name}/extracted_pdfs")
+         # Create the output folder if it doesn't exist
+        os.makedirs(pdf_file_folder, exist_ok=True)
         
         for page_number in range(total_pages):
             pdf_writer = PyPDF2.PdfWriter()
             pdf_writer.add_page(pdf_reader.pages[page_number])
             
-            output_pdf = f"{config.output_file_path}/{input_pdf_name}_page_{page_number + 1}.pdf"
+            output_pdf = f"{pdf_file_folder}/{input_pdf_name}_page_{page_number + 1}.pdf"
             splitted_pdf_paths.append(output_pdf)
             
             with open(output_pdf, 'wb') as output_file:
@@ -55,11 +56,11 @@ def pdf_to_png_image(split_pdf):
         for i, image in enumerate(images):
             # Save the image 
             image_name = os.path.splitext(os.path.basename(pdf_path))[0]
-            print("pdf_path=",pdf_path)
+           
             image_file_name = f"{image_name}.png"
-            print("image_file_name=",image_file_name)
-            image_file_folder = os.path.join(os.path.dirname(pdf_path), "extracted_images")
-            print("image_file_folder=",image_file_folder)
+           
+            image_file_folder = os.path.dirname(pdf_path).replace("extracted_pdfs","extracted_images")
+           
             # Create the folder if it doesn't exist
             os.makedirs(image_file_folder, exist_ok=True)
             
