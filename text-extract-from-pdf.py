@@ -1,3 +1,29 @@
+"""
+File Name: text_extraction_pipeline.py
+Author: Senthilnathan Karuppaiah
+Date: 20-Aug-2023
+Description: This script creates a Dagster pipeline that chains several data processing functions to extract text from PDFs.
+             Function chaining is managed through Dagster's naming conventions, where the output of one function is passed
+             to the next by matching the argument name with the previous function's name.
+             The initial inputs for the pipeline are provided via a JSON structure when materializing the pipeline.
+             The output files from 'split_pdf' are named according to the input file name with page numbers appended.
+
+Note: Update the 'input_file_path' and 'output_file_path' as per your requirements. The 'output_file_path' should be a directory.
+      Output files will be named with the page number appended to the input file name, e.g., 'Ilaiya-Raani_1.pdf', 'Ilaiya-Raani_2.pdf', etc.
+
+Requirements:
+- dagster
+- PyPDF2
+- pdf2image
+- pytesseract
+- PIL
+- elasticsearch
+- structlog
+- python-dotenv
+- json
+
+
+"""
 
 import json
 from dagster import AssetIn, asset, Config
@@ -8,7 +34,40 @@ import os
 from pdf2image import convert_from_path
 from PIL import Image
 from elasticsearch import Elasticsearch
+import logging
+from datetime import datetime
+import structlog
+from dotenv import load_dotenv
 
+load_dotenv()  # Load environment variables from a .env file
+# Retrieve Elasticsearch configuration from environment variables
+ES_CLOUD_ID = os.getenv("ES_CLOUD_ID")
+ES_CLOUD_USERNAME = os.getenv("ES_CLOUD_USERNAME")
+ES_CLOUD_PASSWORD = os.getenv("ES_CLOUD_PASSWORD")
+ES_INDEX_NAME = os.getenv("ES_INDEX_NAME")
+
+# Extract the base name of the script without the directory path or file extension
+script_name = os.path.splitext(os.path.basename(__file__))[0]
+
+# Generate a log filename with the current timestamp
+log_filename = f"{script_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
+logging.basicConfig(filename=log_filename, level=logging.INFO, format="%(message)s")
+structlog.configure(
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ]
+)
+log = structlog.get_logger()
+
+
+# Configuration class for defining asset inputs
 class AssetCongigs(Config):
     input_file_path: str
     output_file_path: str
@@ -16,8 +75,18 @@ class AssetCongigs(Config):
 
 @asset
 def split_pdf(context,config: AssetCongigs):
-    # Implement the logic to split the PDF into individual pages
-    # Return a list of splitted pdf paths
+    """
+    Function to split a PDF into individual page files.
+    The sequence of function calls is managed by Dagster, where the name of the output from this function 'split_pdf'
+    is passed as an argument to the next function in the pipeline.
+
+    Args:
+    - context: The Dagster context object for the asset.
+    - config: AssetConfigs object containing configurations for the asset.
+
+    Returns:
+    - List of paths to the individual PDF page files.
+    """
 
     input_pdf_name = config.input_file_path.split('/')[-1].split('.')[0]  # Extract input PDF file name without extension
     splitted_pdf_paths = []
@@ -40,7 +109,8 @@ def split_pdf(context,config: AssetCongigs):
             with open(output_pdf, 'wb') as output_file:
                 pdf_writer.write(output_file)
             
-            print(f"Page {page_number + 1} saved as {output_pdf}")
+            #print(f"Page {page_number + 1} saved as {output_pdf}")
+            log.info(f"Page {page_number + 1} saved as {output_pdf}")
     
     return splitted_pdf_paths
 
@@ -48,7 +118,18 @@ def split_pdf(context,config: AssetCongigs):
 
 @asset
 def pdf_to_png_image(split_pdf):
-   
+    """
+    Function to convert PDF page files to PNG image files. Uses pdf2image library
+    The argument 'split_pdf' takes the output from the 'split_pdf' function as input, following Dagster's naming convention.
+    
+
+    Args:
+    - split_pdf: List of paths to the individual PDF page files.
+
+    Returns:
+    - List of paths to the generated PNG image files.
+    """
+
     extracted_image_files = []
 
     for idx, pdf_path in enumerate(split_pdf):
@@ -80,6 +161,19 @@ def pdf_to_png_image(split_pdf):
 
 @asset
 def extract_text_from_png(pdf_to_png_image,config: AssetCongigs):
+    """
+    Function to extract text from PNG images using OCR. Uses pytesseract to perform OCR on PNG images to extract text.
+    The argument 'pdf_to_png_image' takes the output from the 'pdf_to_png_image' function as input.
+    
+
+    Args:
+    - pdf_to_png_image: List of paths to the PNG image files.
+    - config: AssetConfigs object containing configurations for the asset.
+
+    Returns:
+    - List of paths to the text files containing the extracted text.
+    """
+
     extracted_text_files = []
 
     for idx, png_path in enumerate(pdf_to_png_image):
@@ -113,6 +207,17 @@ def extract_text_from_png(pdf_to_png_image,config: AssetCongigs):
     
 @asset
 def build_json_documents(extract_text_from_png):
+    """
+    Function to build JSON documents from the text extracted from PNG images.
+    Constructs JSON documents with the extracted text and metadata from PNG images.
+    The argument 'extract_text_from_png' takes the output from the 'extract_text_from_png' function as input.
+    
+    Args:
+    - extract_text_from_png: List of paths to the text files with extracted text.
+
+    Returns:
+    - List of JSON objects representing the documents.
+    """
     
    # Initialize an array to store the JSON book documents
     book_documents = []
@@ -143,6 +248,17 @@ def build_json_documents(extract_text_from_png):
 
 @asset
 def save_to_disk(build_json_documents):
+    """
+    Function to save JSON documents to disk.
+    The argument 'build_json_documents' takes the output from the 'build_json_documents' function as input.
+    
+    Args:
+    - build_json_documents: List of JSON objects representing the documents.
+
+    Returns:
+    - List of JSON objects that were saved to disk.
+    """
+
     json_string = json.dumps(build_json_documents, indent=4, ensure_ascii=False)
     # Save the book documents as a JSON file
     output_file_path = build_json_documents[0]["title"] + ".json"
@@ -151,14 +267,22 @@ def save_to_disk(build_json_documents):
     return build_json_documents
 
 
-
-    
 @asset
 def save_to_elasticsearch(save_to_disk):
-    cloud_id = 'ebooks:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRlOTdhNGI0NzBlMmE0OWNmYjBlMTBjOWJiMzQ2NTQxNSQ4OTQ5NjU2OTU3ZGM0MzUwOTYwYWU5ODcyZjEzMTVlZg=='  # Replace with your Elastic Cloud ID
-    cloud_auth = ('elastic', 'n26ugDzFh4NhGldmQDKMyKm0')  # Replace with your Cloud username and password
+    """
+    Function to index JSON documents in Elasticsearch (cloud)
+    The argument 'save_to_disk' takes the output from the 'save_to_disk' function as input.
+    
+    Args:
+    - save_to_disk: List of JSON objects representing the documents.
+
+    Returns:
+    - None
+    """
+    cloud_id = f"${ES_INDEX_NAME}:${ES_CLOUD_ID}"  
+    cloud_auth = (ES_CLOUD_USERNAME, ES_CLOUD_PASSWORD)  # Replace with your Cloud username and password
     es = Elasticsearch( cloud_id=cloud_id, http_auth=cloud_auth )
-    index_name = 'ebooks'
+    index_name = ES_INDEX_NAME
 
     for ebook in save_to_disk:
         # Index each eBook document

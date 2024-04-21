@@ -1,21 +1,28 @@
-
 import json
 from dagster import AssetIn, asset, Config
 import os
+from dotenv import load_dotenv
 
 from elasticsearch import Elasticsearch
+
+load_dotenv()
+
+ES_CLOUD_ID = os.getenv("ES_CLOUD_ID")
+ES_CLOUD_USERNAME=os.getenv("ES_CLOUD_USERNAME")
+ES_CLOUD_PASSWORD=os.getenv("ES_CLOUD_PASSWORD")
+ES_INDEX_NAME=os.getenv("ES_INDEX_NAME")
 
     
 @asset
 def indexer():
-    cloud_id = 'ebooks:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRlOTdhNGI0NzBlMmE0OWNmYjBlMTBjOWJiMzQ2NTQxNSQ4OTQ5NjU2OTU3ZGM0MzUwOTYwYWU5ODcyZjEzMTVlZg=='  # Replace with your Elastic Cloud ID
-    cloud_auth = ('elastic', 'n26ugDzFh4NhGldmQDKMyKm0')  # Replace with your Cloud username and password
+    cloud_id = ES_CLOUD_ID 
+    cloud_auth = (ES_CLOUD_USERNAME, ES_CLOUD_PASSWORD) 
     es = Elasticsearch( cloud_id=cloud_id, http_auth=cloud_auth )
     index_name = 'amazon'
     doc_type = "_doc"
 
     # Path to the JSON file
-    json_file_path = "/Users/skaruppaiah1/projects/dagster-data-flows/input/amazon.books.json"
+    json_file_path = "input/amazon.books.json"
 
 
     # Read the JSON file
