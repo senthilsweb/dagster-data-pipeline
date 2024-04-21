@@ -108,3 +108,4 @@ venv.bak/
 .mypy_cache/
 docx/data/output/*.docx
 tmp*
+
