@@ -1,0 +1,21 @@
+schema: spec-driven
+
+# Project context
+# This is shown to AI when creating artifacts.
+context: |
+  Tech stack: Python 3.12, Dagster 1.9+, Apache Tika (Java 17), PyArrow, datasketch, structlog, python-dotenv, python-magic
+  Mono-repo layout: each pipeline lives in its own sub-folder under the repo root with its own pyproject.toml.
+  Conventions: module docstring with File Name / Author / Date / Description / Note / Requirements;
+    structlog JSONRenderer + ISO timestamps; every function has Args/Returns docstrings; constants uppercase at module level.
+  Coding style follows dagster-data-pipeline/text-extract-from-pdf.py as the reference.
+  OpenSpec is the change-management process: every non-trivial change gets a proposal + design + tasks.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Keep the Why/What/Capabilities/Impact structure
+    - Include Non-goals section for large changes
+  tasks:
+    - Number tasks hierarchically (1.1, 1.2, …)
+    - Each leaf task should be completable in under 2 hours
+    - Include a Smoke test task group at the end

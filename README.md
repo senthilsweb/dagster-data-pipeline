@@ -6,29 +6,103 @@
 
 I'm sharing a collection of my work in data engineering that showcases practical applications of Dagster for managing and orchestrating data pipelines. Through these examples, you'll discover how Dagster helps streamline and optimize various data processes.
 
-In this collection, I've included tasks related to data engineering, ML model building, and other day-to-day application-related long-running multi-step background tasks. I approach these tasks as "bots," each designed to address a specific problem with a single responsibility. Every bot is meticulously programmed with detailed inline comments explaining the dependencies, and enhanced logging for better observability. I adhere to a standard style and convention while programming these bots, ensuring each step is clear and maintainable.
+I approach each pipeline as a "bot" with a single responsibility, meticulously programmed with detailed inline comments, structured logging, and a standard style and convention ensuring each step is clear and maintainable.
 
-**Why Dagster and why not Airflow?** 
+**Why Dagster and not Airflow?**
 
-I prefer using `Dagster` over other orchestration tools like `Airflow` for its `simplicity` and `embeddable` nature, which allows for operations without Docker or Kubernetes. Dagster is also increasingly popular in modern orchestration platforms, meeting the requirements of the modern data stack with features like Data Catalog, Lineage, Federated Data Governance, and Data Checks and Quality, which I discuss in my blog posts and LinkedIn updates.
-
-**Source code**
-
-For those interested in exploring the code and contributing, all resources and project details are available on my GitHub repository. You can delve into the codebase, experiment with the implementations, or even contribute to its development.
+I prefer `Dagster` for its `simplicity` and `embeddable` nature — no Docker or Kubernetes required for local development. It also ships with Data Catalog, Lineage, Federated Data Governance, and Data Quality features out of the box.
 
 Visit the GitHub repository [dagster-data-pipeline](https://github.com/senthilsweb/dagster-data-pipeline).
 
-> If any step in the process fails, Dagster allows for rerunning just that specific step without needing to restart the entire process from scratch. This capability is especially beneficial in handling large volumes of data, as it prevents the loss of progress made in preceding steps, thereby saving time and computational resources.
+---
 
-I am developing a series of automation bots in my free time, which I will release sequentially along with accompanying articles:
+## Mono-repo Structure
+
+This repository is a **mono-repo**: each pipeline lives in its own sub-folder with an independent
+Python package (`pyproject.toml`) and README. A root `workspace.yaml` wires all pipelines into a
+single Dagster UI.
+
+```
+dagster-data-pipeline/
+├── workspace.yaml                       ← single entry point for all pipelines
+├── docker-compose.yaml                  ← run everything with docker compose up
+├── sample.env                           ← copy to .env before docker compose up
+├── dagster.yaml                         ← shared Dagster instance config
+├── openspec/                            ← change management (proposals, designs, tasks)
+│
+├── minhash-lsh-fingerprint-pipeline/    ← MinHash + LSH document fingerprinting pipeline
+│   ├── README.md
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── generate_docs.py                 ← synthetic corpus generator
+│   ├── data/input/                      ← input documents
+│   ├── data/output/                     ← pipeline artifacts
+│   └── src/docfp/                       ← docfp Python package
+│
+├── es-indexer.py                        ← Elasticsearch indexing bot
+├── text-extract-from-pdf.py             ← PDF OCR extraction bot
+└── requirements.txt                     ← legacy script dependencies
+```
+
+### Pipelines
+
+| Pipeline | Description | README |
+|----------|-------------|--------|
+| `minhash-lsh-fingerprint-pipeline` | Dagster-native document fingerprinting using MinHash + LSH for near-duplicate detection without embeddings | [README](minhash-lsh-fingerprint-pipeline/README.md) |
+| `text-extract-from-pdf.py` | Split PDFs into pages, OCR each page, persist text to DuckDB / Elasticsearch | *(inline below)* |
+| `es-indexer.py` | Index documents into Elasticsearch | *(inline below)* |
+
+---
+
+## Quick Start (all pipelines, local)
+
+```bash
+# 1. Create shared venv
+python3.12 -m venv .venv && source .venv/bin/activate
+
+# 2. Install fingerprint pipeline package
+pip install -e "minhash-lsh-fingerprint-pipeline/[dev]"
+
+# 3. Install legacy script dependencies
+pip install -r requirements.txt
+
+# 4. Launch Dagster UI (all pipelines in one view)
+dagster dev -w workspace.yaml
+# → http://127.0.0.1:3000
+```
+
+## Quick Start (Docker)
+
+```bash
+cp sample.env .env          # configure paths and thresholds
+
+# Option A — pull pre-built image from GitHub Container Registry (fastest)
+docker compose pull && docker compose up -d
+
+# Option B — build locally from source
+docker compose build && docker compose up -d
+
+# → http://localhost:3000
+docker compose down         # stop
+```
+
+> **Docker image:** `ghcr.io/senthilsweb/minlsh:latest` ([packages](https://github.com/senthilsweb/dagster-data-pipeline/pkgs/container/minlsh))
+> Built for `linux/amd64` and `linux/arm64` via GitHub Actions on every tagged release.
+
+---
+
+## Automation Bots Roadmap
 
 - [x] Split PDF documents and large books into PNGs, perform OCR to extract text, and save in DuckDB.
+- [x] Document fingerprinting pipeline — MinHash + LSH near-duplicate detection without embeddings.
 - [ ] Scrape Instagram posts and images, storing them in DuckDB.
 - [ ] Import Jira issues into DuckDB for custom metrics and reporting.
 - [ ] Create and seed databases for heterogeneous systems using a unified approach with DBT.
 - [ ] Execute DBT jobs for the TickitDB ELT pipeline through Dagster.
 - [ ] Send Slack notifications for various alerts and reminders.
 - [ ] Perform scheduled data quality checks on demo data sources.
+
+---
 
 ## Text Extraction from PDF for ebook digitisation
 

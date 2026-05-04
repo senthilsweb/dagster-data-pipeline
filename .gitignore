@@ -109,3 +109,29 @@ venv.bak/
 docx/data/output/*.docx
 tmp*
 
+# ── mono-repo additions ────────────────────────────────────────────────────────
+
+# Dagster runtime dirs
+dagster_home/
+.tmp_dagster_home_*/
+
+# Pipeline output artifacts (never commit generated data)
+minhash-lsh-fingerprint-pipeline/data/output/
+
+# All log files — processor, extractor, test run logs
+*.log
+**/*.log
+
+# Parquet, pickle, msgpack intermediate artifacts at root level
+*.parquet
+*.pkl
+*.msgpack
+
+# macOS filesystem noise
+**/.DS_Store
+
+# Editor / IDE
+.idea/
+*.swp
+*.swo
+

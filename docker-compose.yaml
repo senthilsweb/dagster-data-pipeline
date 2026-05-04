@@ -1,0 +1,34 @@
+services:
+  minlsh:
+    build:
+      context: minhash-lsh-fingerprint-pipeline
+      dockerfile: Dockerfile
+    image: ghcr.io/senthilsweb/minlsh:latest
+    ports:
+      - "${DAGSTER_PORT:-3000}:3000"
+    volumes:
+      - "${INPUT_DIR:-./minhash-lsh-fingerprint-pipeline/data/input}:/data/input"
+      - "${OUTPUT_DIR:-./minhash-lsh-fingerprint-pipeline/data/output}:/data/output"
+      - "${DAGSTER_HOME_DIR:-./dagster_home}:/dagster_home"
+    environment:
+      DAGSTER_HOME: /dagster_home
+      DOCFP_OUTPUT_ROOT: ${DOCFP_OUTPUT_ROOT:-/data/output}
+      DOCFP_SHINGLE_SIZE: ${DOCFP_SHINGLE_SIZE:-5}
+      DOCFP_MINHASH_NUM_PERM: ${DOCFP_MINHASH_NUM_PERM:-128}
+      DOCFP_LSH_THRESHOLD: ${DOCFP_LSH_THRESHOLD:-0.5}
+      DOCFP_DLP_SAFE_MODE: ${DOCFP_DLP_SAFE_MODE:-true}
+      DOCFP_OCR_ENABLED: ${DOCFP_OCR_ENABLED:-false}
+      DOCFP_LOG_LEVEL: ${DOCFP_LOG_LEVEL:-INFO}
+      TIKA_SERVER_JAR: ${TIKA_SERVER_JAR:-/opt/tika/tika-server.jar}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx512m}
+    restart: unless-stopped
+
+# ─── Usage ────────────────────────────────────────────────────────────────────
+# Pull pre-built image (fastest):
+#   docker compose pull && docker compose up -d
+#
+# Build locally:
+#   docker compose build && docker compose up -d
+#
+# Stop:
+#   docker compose down
